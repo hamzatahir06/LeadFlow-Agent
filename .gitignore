@@ -1,0 +1,5 @@
+token.pickle
+.env
+gmail_credentials.json
+results/
+__pycache__/
