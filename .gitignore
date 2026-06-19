@@ -1,5 +1,21 @@
-token.pickle
+# Secrets
 .env
+token.pickle
 gmail_credentials.json
-results/
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Data
+results/
+*.json
