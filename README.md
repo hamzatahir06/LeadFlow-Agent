@@ -40,7 +40,7 @@ Gmail Inbox → Agent Checks Every 5 Mins
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/EmailAutomaton.git
+git clone https://github.com/hamzatahir06/EmailAutomaton.git
 cd EmailAutomaton
 ```
 
