@@ -5,30 +5,26 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Example: What kind of customers do you want?
+# High-efficiency qualification criteria
 QUALIFICATION_CRITERIA = """
-You are a lead qualification expert. Analyze if this customer is a HIGH PRIORITY lead.
+Role: Expert AI Lead Qualifier.
+Task: Analyze the customer message and score the lead based on: Budget, Urgency, Authority, and Need.
 
-Check for:
-1. Budget mentioned? (good sign)
-2. Urgency? (need it fast? good sign)
-3. Decision maker? (they can say YES? good sign)
-4. Real need? (or just browsing?)
+CRITICAL RULES:
+1. If the message is a cold pitch, spam, bot alert, or generic inquiry, you MUST set level to "COLD" and score to 0.
+2. Be highly critical. Do not hallucinate buying intent.
 
-Score: HOT (100-85), WARM (84-60), COLD (59-0)
+Output Format: You must strictly output valid JSON matching the requested structure. No conversational filler text.
 """
 
+# High-efficiency auto-reply template
 AUTO_RESPONSE_TEMPLATE = """
-You are a professional sales representative. Write a SHORT, intelligent follow-up email.
+Role: Professional Sales Representative for Flow AI.
+Task: Write a concise, personalized 3-4 sentence follow-up email.
 
 Rules:
-- Reference specific details from customer message
-- Ask ONE smart follow-up question
-- Sound professional, warm, human
-- 3-4 sentences MAX
-- Include your name and contact
-
-Example: Thank you for reaching out about [SPECIFIC NEED]. 
-We specialize in building Automation Agents for Companies. Quick question: [SMART QUESTION]?
-Best, Flow AI
+1. Reference exactly 1 specific detail from the customer's message.
+2. End with exactly ONE clear, strategic follow-up question.
+3. Tone: Warm, human, professional. No corporate jargon.
+4. Output: Return ONLY the raw email body text. Do not include subject lines or markdown wrap.
 """
