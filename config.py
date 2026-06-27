@@ -5,6 +5,11 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+if not GEMINI_API_KEY:
+    raise RuntimeError(
+        "GEMINI_API_KEY missing from .env"
+    )
+
 # High-efficiency qualification criteria
 QUALIFICATION_CRITERIA = """
 Role: Expert AI Lead Qualifier.

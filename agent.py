@@ -1,6 +1,6 @@
 import schedule
 import time
-import google.generativeai as genai
+from google import genai
 from config import GEMINI_API_KEY, QUALIFICATION_CRITERIA, AUTO_RESPONSE_TEMPLATE
 from gmail_handler import (
     get_gmail_service, get_unread_emails, 
@@ -9,10 +9,12 @@ from gmail_handler import (
 from slack_handler import send_slack_notification
 import json
 from datetime import datetime
+import os
 
 # Setup Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-3.1-flash-lite')
+client = genai.Client(
+    api_key=GEMINI_API_KEY
+)
 
 def analyze_lead(customer_message):
     """Analyze email and score it"""
@@ -30,11 +32,24 @@ def analyze_lead(customer_message):
         "key_points": ["point1", "point2"]
     }}
     """
-    
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt
+    )
+        return response.text
 
-def generate_auto_reply(customer_message, qualification_level):
+    except Exception as e:
+        print(f"❌ Gemini Analysis Error: {e}")
+        
+        return json.dumps({
+            "score": 0,
+            "level": "COLD",
+            "why": "Gemini analysis failed",
+            "key_points": []
+        })
+    
+def generate_auto_reply(customer_message,qualification_level):
     """Generate smart reply"""
     prompt = f"""
     {AUTO_RESPONSE_TEMPLATE}
@@ -44,11 +59,22 @@ def generate_auto_reply(customer_message, qualification_level):
     
     LEAD LEVEL: {qualification_level}
     
-    Write a friendly email reply (just the email body, 3-5 lines):
+    Write a friendly email reply (just the email body, 3-10 lines):
     """
-    
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt
+    )
+        return response.text
+
+    except Exception as e:
+        print(f"❌ Gemini Reply Error: {e}")
+
+        return (
+            "Thank you for reaching out. "
+            "We received your message and will review it shortly."
+        )
 
 def process_email(service, email):
     """Process ONE email"""
@@ -79,13 +105,24 @@ def process_email(service, email):
     analysis_text = analyze_lead(body)
     
     clean_text = analysis_text.strip()
-    if clean_text.startswith('```json'):
-        clean_text = clean_text.replace('```json', '').replace('```', '')
+    if clean_text.startswith("```"):
+        clean_text = (
+            clean_text
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
     
     try:
         analysis = json.loads(clean_text)
-    except:
-        analysis = {"score": 50, "level": "WARM", "why": "Couldn't parse", "key_points": []}
+    except Exception as e:
+        print(f"JSON Parse Error: {e}")
+        analysis = {
+            "score": 0,
+            "level": "COLD",
+            "why": "JSON parsing failed",
+            "key_points": []
+            }
     
     score = analysis.get('score', 0)
     level = analysis.get('level', 'UNKNOWN')
@@ -117,8 +154,12 @@ def process_email(service, email):
         print("❌ Failed to send reply")
         return False
 
+
 def save_result(sender, subject, score, level, reply):
     """Save result to file"""
+
+    os.makedirs("results", exist_ok=True)
+
     result = {
         "timestamp": datetime.now().isoformat(),
         "sender": sender,
@@ -127,18 +168,23 @@ def save_result(sender, subject, score, level, reply):
         "level": level,
         "reply": reply
     }
-    
-    filename = f"results/agent_lead_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(filename, 'w') as f:
+
+    filename = (
+        f"results/agent_lead_"
+        f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
+
+    with open(filename, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
-    
-    print(f"💾 Saved to {filename}")
+
+    print(f"💾 Saved to {filename}")    
+   
 
 def run_agent():
     """Main agent loop"""
-    print(f"\n{'='*50}")
+    print(f"\n{'='*100}")
     print(f"🤖 Agent Running at {datetime.now().strftime('%H:%M:%S')}")
-    print(f"{'='*50}")
+    print(f"{'='*100}")
     
     try:
         service = get_gmail_service()
@@ -155,9 +201,9 @@ def run_agent():
         print(f"❌ Agent error: {e}")
 
 def schedule_agent():
-    """Schedule agent to run every 5 minutes"""
-    schedule.every(5).minutes.do(run_agent)
-    print("🚀 Agent scheduled! Running every 5 minutes...")
+    """Schedule agent to run every 10 minutes"""
+    schedule.every(10).minutes.do(run_agent)
+    print("🚀 Agent scheduled! Running every 10 minutes...")
     print("Press Ctrl+C to stop\n")
     
     while True:
@@ -165,5 +211,5 @@ def schedule_agent():
         time.sleep(1)
 
 if __name__ == "__main__":
-    run_agent()       # Run once immediately on startup
-    schedule_agent()  # Start the 5-minute repetition loop
+    run_agent()       # Run once 10 immediately on startup
+    schedule_agent()  # Start the 10-minute repetition loop
